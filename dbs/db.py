@@ -12,16 +12,14 @@ DATABASE_NAME = os.environ['DATABASE_NAME']
 
 # uid=<username>;
 # pwd=<password>;
-connection_string = f"""
-    DRIVER={{{DRIVER_NAME}}};
-    SERVER={SERVER_NAME};
-    DATABASE={DATABASE_NAME};
-    Trust_Connection=yes;
-"""
+# connection_string = f"""
+#     DRIVER={{{DRIVER_NAME}}};
+#     SERVER={SERVER_NAME};
+#     DATABASE={DATABASE_NAME};
+#     Trust_Connection=yes;
+# """
 
 conn = odbc.connect(driver=DRIVER_NAME, server=SERVER_NAME, database=DATABASE_NAME)
-# conn.setdecoding(odbc.SQL_CHAR, encoding='UTF-16')
-# conn.setencoding('UTF-16')
 c = conn.cursor()
 
 
@@ -40,6 +38,15 @@ def find_user(name: str):
     return row
 
 
+def check_user_in_mess(id: int) -> bool:
+    c.execute('SELECT COUNT(*) FROM cMessage WHERE cMessage.Sender=? OR cMessage.Receiver=?',
+              (id,id))
+    count = c.fetchone()[0]
+    if count != 0:
+        return True
+    return False
+
+
 def insert_user(user: User):
     c.execute('SELECT COUNT(*) FROM cUser')
     count = c.fetchone()[0]
@@ -51,11 +58,15 @@ def insert_user(user: User):
         conn.commit()
 
 
-def delete_user_db(id):
+def delete_user_db(id: int, mess_exist: bool = False):
     c.execute('SELECT COUNT(*) FROM cUser')
     count = c.fetchone()[0]
 
     with conn:
+        if mess_exist:
+            c.execute('DELETE FROM cMessage WHERE cMessage.Sender=? OR cMessage.Receiver=?',
+                      (id, id))
+
         c.execute('DELETE FROM cUser WHERE Id=?', (id))
         for i in range(id+1, count):
             change_position('cUser', i, i-1, False)
@@ -86,6 +97,13 @@ def get_all_users() -> List[User]:
 
 
 # Problem
+def find_problem_id(id: int):
+    c.execute('SELECT Id, Title, Progress FROM cProblem WHERE Id = ?', (id,))
+
+    row = c.fetchone()
+    return row
+
+
 def find_problem(title: str):
     c.execute('SELECT Id, Title, Progress FROM cProblem WHERE Title = ?', (title,))
 
@@ -113,11 +131,24 @@ def insert_problem(problem: Problem):
         conn.commit()
 
 
-def delete_problem_db(id):
+def check_problem_in_mess(id: int) -> bool:
+    c.execute('SELECT COUNT(*) FROM cMessage WHERE cMessage.Problem=?',
+              (id,))
+    count = c.fetchone()[0]
+    if count != 0:
+        return True
+    return False
+
+
+def delete_problem_db(id: int, mess_exist: bool = False):
     c.execute('SELECT COUNT(*) FROM cProblem')
     count = c.fetchone()[0]
 
     with conn:
+        if mess_exist:
+            c.execute('DELETE FROM cMessage WHERE cMessage.Problem=?', 
+                      (id))
+
         c.execute('DELETE FROM cProblem WHERE Id=?', (id))
         for i in range(id+1, count):
             change_position('cProblem', i, i-1, False)
@@ -151,6 +182,25 @@ def send_message(message: Message):
         conn.commit()
 
 
+def delete_message_db(id):
+    c.execute('SELECT COUNT(*) FROM cMessage')
+    count = c.fetchone()[0]
+
+    with conn:
+        c.execute('DELETE FROM cMessage WHERE Id=?', (id))
+        for i in range(id+1, count):
+            change_position('cMessage', i, i-1, False)
+        conn.commit()
+
+
+def find_message_from_user(id: int, user_id: int):
+    c.execute('SELECT * FROM cMessage WHERE cMessage.Id=? AND cMessage.Sender=?',
+              (id, user_id))
+
+    row = c.fetchone()
+    return row
+
+
 def get_all_messages_sent(id: int) -> List[Message]:
     c.execute("""SELECT cMessage.Id, cMessage.Descript, cMessage.MssgType, cMessage.MssgDate, cMessage.Sender, cUser.UserName, cProblem.Title
                         FROM cMessage INNER JOIN cProblem ON cMessage.Problem=cProblem.Id
@@ -182,8 +232,8 @@ def get_all_messages_received(id: int) -> List[Message]:
 
 
 def change_position(table_name: str, last_id: int, new_id: int, commit=True):
-    c.execute('UPDATE :table_name SET Id=:new_id WHERE Id= :last_id',
-              {'table_name': table_name, 'new_id': new_id, 'last_id': last_id})
+    c.execute('UPDATE ? SET Id=? WHERE Id=?',
+              {table_name, new_id, last_id})
 
     if commit:
         conn.commit()
