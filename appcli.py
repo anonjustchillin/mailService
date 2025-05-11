@@ -78,6 +78,7 @@ def login():
             console.print(USER_NOT_FOUND)
     else:
         logout()
+        login()
 
 
 @app.command()
@@ -86,7 +87,6 @@ def logout():
     if load_user() is not None:
         quit_user()
     console.print(f'[bold magenta]До побачення![/bold magenta]')
-    raise typer.Exit()
 
 
 def show_myself():
@@ -106,19 +106,23 @@ def about():
 
 @app.command(short_help='вивід усіх користувачів (users) / проблем (problems) / повідомлень (messages) / свої дані (myself)')
 def show(what: str):
+    current_user = load_user()
     if what is not None:
         if what == 'users':
             show_users()
         elif what == 'problems':
             show_problems()
         elif what == 'messages':
-            choice = typer.prompt('Повідомлення надіслані чи отримані [1/2]')
-            if choice == '1' or choice == 'from-me':
-                show_messages_sent()
-            elif choice == '2' or choice == 'to-me':
-                show_messages_received()
+            if current_user is not None:
+                choice = typer.prompt('Повідомлення надіслані чи отримані [1/2]')
+                if choice == '1' or choice == 'from-me':
+                    show_messages_sent()
+                elif choice == '2' or choice == 'to-me':
+                    show_messages_received()
+                else:
+                    console.print(INCORRECT_DATA)
             else:
-                console.print(INCORRECT_DATA)
+                console.print(NO_ACCESS)
         elif what == 'myself':
             show_myself()
         else:
@@ -166,10 +170,12 @@ def delete(what: str):
         if what == 'user':
             if current_user[2] == 'Користувач':
                 console.print(NO_ACCESS)
+                return
             delete_user()
         elif what == 'problem':
             if current_user[2] == 'Користувач':
                 console.print(NO_ACCESS)
+                return
             delete_problem()
         elif what == 'message':
             delete_message()
@@ -218,10 +224,10 @@ def delete_user():
 
 def update_user():
     id = int(typer.prompt('Id користувача'))
-    name = typer.prompt("Прізвище Ім'я")
-    role = typer.prompt("Роль")
-    if name is not None or role is not None:
-        update_user(id, name, role)
+    name = typer.prompt("Прізвище Ім'я (або -)")
+    role = typer.prompt("Роль (або -)")
+    if name != "-" or role != "-":
+        update_user_db(id, name, role)
         typer.echo(f"Оновлено дані про користувача {id}")
         show_users()
     else:
@@ -235,6 +241,7 @@ def show_users():
     table = Table(show_header=True, header_style="bold blue")
     table.add_column("Ім'я", min_width=20)
     table.add_column("Роль", min_width=12)
+    table.add_column("Id", min_width=5)
 
     def get_user_color(role):
         COLORS = {'Користувач': 'yellow',
@@ -247,7 +254,7 @@ def show_users():
 
     for i, user in enumerate(users, start=1):
         color = get_user_color(user.role)
-        table.add_row(cut_str(user.name), f'[{color}]{cut_str(user.role)}[/{color}]')
+        table.add_row(cut_str(user.name), f'[{color}]{cut_str(user.role)}[/{color}]', str(user.id))
     console.print(table)
 
 
@@ -302,10 +309,28 @@ def delete_problem():
 
 def update_problem():
     id = int(typer.prompt('Id зауваження'))
-    title = typer.prompt("Назва")
-    progress = typer.prompt("Статус")
-    if title is not None or progress is not None:
-        update_problem(id, title, progress)
+    title = typer.prompt("Назва (або -)")
+    while True:
+        console.print('Статус: 1 - На розгляді, 2 - У процесі, 3 - Виконано, 4 - Відхилено')
+        progress_num = int(typer.prompt("[1/2/3/4]"))
+        match progress_num:
+            case 1:
+                progress = 'На розгляді'
+                break
+            case 2:
+                progress = 'У процесі'
+                break
+            case 3:
+                progress = 'Виконано'
+                break
+            case 4:
+                progress = 'Відхилено'
+                break
+            case _:
+                console.print(INCORRECT_DATA)
+
+    if title != "-" or progress != "-":
+        update_problem_db(id, title, progress)
         typer.echo(f"Оновлено дані про зауваження {id}")
         show_problems()
     else:
@@ -320,9 +345,10 @@ def show_problems():
     table.add_column("№", width=5, style="dim")
     table.add_column("Назва", min_width=15)
     table.add_column("Статус", min_width=12)
+    table.add_column("Id", min_width=5)
 
     for i, prob in enumerate(problems, start=1):
-        table.add_row(str(i), cut_str(prob.title), cut_str(prob.progress))
+        table.add_row(str(i), cut_str(prob.title), cut_str(prob.progress), str(prob.id))
     console.print(table)
 
 
@@ -332,7 +358,7 @@ def delete_message():
     id = int(typer.prompt('Id повідомлення'))
 
     current_user = load_user()
-    row = find_message_from_user(id, current_user[0])
+    row = find_message_from_user(id, int(current_user[0]))
     if row is not None:
         delete_message_db(id)
         typer.echo(f"Видалено повідомлення {id}")

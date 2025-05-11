@@ -68,20 +68,18 @@ def delete_user_db(id: int, mess_exist: bool = False):
                       (id, id))
 
         c.execute('DELETE FROM cUser WHERE Id=?', (id))
-        for i in range(id+1, count):
-            change_position('cUser', i, i-1, False)
         conn.commit()
 
 
-def update_user(id, name, role):
+def update_user_db(id, name, role):
     with conn:
-        if name is not None and role is not None:
+        if name != "-" and role != "-":
             c.execute('UPDATE cUser SET UserName=?, UserRole=? WHERE Id=?',
                       (name, role, id))
-        elif name is not None:
+        elif name != "-":
             c.execute('UPDATE cUser SET UserName=? WHERE Id=?',
                       (name, id))
-        elif role is not None:
+        elif role != "-":
             c.execute('UPDATE cUser SET UserRole=? WHERE Id=?',
                       (role, id))
         conn.commit()
@@ -140,7 +138,7 @@ def check_problem_in_mess(id: int) -> bool:
     return False
 
 
-def delete_problem_db(id: int, mess_exist: bool = False):
+def delete_problem_db(id: int, mess_exist: bool):
     c.execute('SELECT COUNT(*) FROM cProblem')
     count = c.fetchone()[0]
 
@@ -150,20 +148,18 @@ def delete_problem_db(id: int, mess_exist: bool = False):
                       (id))
 
         c.execute('DELETE FROM cProblem WHERE Id=?', (id))
-        for i in range(id+1, count):
-            change_position('cProblem', i, i-1, False)
         conn.commit()
 
 
-def update_problem(id, title, progress):
+def update_problem_db(id, title, progress):
     with conn:
-        if title is not None and progress is not None:
+        if title != "-" and progress != "-":
             c.execute('UPDATE cProblem SET Title=?, Progress=? WHERE Id=?',
                       (title, progress, id))
-        elif title is not None:
+        elif title != "-":
             c.execute('UPDATE cProblem SET Title=? WHERE Id=?',
                       (title, id))
-        elif progress is not None:
+        elif progress != "-":
             c.execute('UPDATE cProblem SET Progress=? WHERE Id=?',
                       (progress, id))
         conn.commit()
@@ -187,9 +183,8 @@ def delete_message_db(id):
     count = c.fetchone()[0]
 
     with conn:
-        c.execute('DELETE FROM cMessage WHERE Id=?', (id))
-        for i in range(id+1, count):
-            change_position('cMessage', i, i-1, False)
+        c.execute('DELETE FROM cMessage WHERE Id=?', 
+                  (id))
         conn.commit()
 
 
@@ -229,11 +224,3 @@ def get_all_messages_received(id: int) -> List[Message]:
         messages.append(Message(*i))
 
     return messages
-
-
-def change_position(table_name: str, last_id: int, new_id: int, commit=True):
-    c.execute('UPDATE ? SET Id=? WHERE Id=?',
-              {table_name, new_id, last_id})
-
-    if commit:
-        conn.commit()
