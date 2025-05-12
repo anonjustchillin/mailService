@@ -10,15 +10,6 @@ DRIVER_NAME = os.environ['DRIVER_NAME']
 SERVER_NAME = os.environ['SERVER_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 
-# uid=<username>;
-# pwd=<password>;
-# connection_string = f"""
-#     DRIVER={{{DRIVER_NAME}}};
-#     SERVER={SERVER_NAME};
-#     DATABASE={DATABASE_NAME};
-#     Trust_Connection=yes;
-# """
-
 conn = odbc.connect(driver=DRIVER_NAME, server=SERVER_NAME, database=DATABASE_NAME)
 c = conn.cursor()
 
