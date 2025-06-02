@@ -39,9 +39,9 @@ def check_user_in_mess(id: int) -> bool:
 
 
 def insert_user(user: User):
-    c.execute('SELECT COUNT(*) FROM cUser')
-    count = c.fetchone()[0]
-    user.id = count+1 if count else 0
+    c.execute('SELECT LAST(Id) FROM cUser')
+    last_id = c.fetchone()[0]
+    user.id = last_id+1 if last_id else 0
 
     with conn:
         c.execute('INSERT INTO cUser VALUES (?, ?, ?)',
@@ -110,9 +110,9 @@ def get_all_problems() -> List[Problem]:
 
 
 def insert_problem(problem: Problem):
-    c.execute('SELECT COUNT(*) FROM cProblem')
-    count = c.fetchone()[0]
-    problem.id = count+1 if count else 0
+    c.execute('SELECT MAX(Id) FROM cProblem')
+    last_id = c.fetchone()[0]
+    problem.id = last_id+1 if last_id else 0
 
     with conn:
         c.execute('INSERT INTO cProblem VALUES (?, ?, ?)',
@@ -158,9 +158,9 @@ def update_problem_db(id, title, progress):
 
 # Message
 def send_message(message: Message):
-    c.execute('SELECT COUNT(*) FROM cMessage')
-    count = c.fetchone()[0]
-    message.id = count+1 if count else 0
+    c.execute('SELECT MAX(Id) FROM cMessage')
+    last_id = c.fetchone()[0]
+    message.id = last_id+1 if last_id else 0
 
     with conn:
         c.execute('INSERT INTO cMessage VALUES (?, ?, ?, ?, ?, ?, ?)',
