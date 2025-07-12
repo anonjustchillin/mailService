@@ -1,6 +1,7 @@
 # 2-Year Course Work
 ### Subject: Databases
 ### Topic: Testing software products
+### Language: Ukrainian
 ### Description
 This application is a command line interface, or **CLI**, written in Python, using **Typer** (for convenient writing of the CLI application), **Rich** (for displaying tables, colored text in the console), **pyodbc** (for connecting to the SQL Server Management Studio database) libraries.
 ## Main commands
